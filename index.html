@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="forest">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>慈大人社未來島｜探索慈大人文、傳播與社會科學升學方向</title>
+  <meta name="description" content="由造島工坊 IsleForge 打造的慈濟大學人文傳播暨社會科學院 3D 島嶼網站。探索社工、人發心理、兒家、外語科技、傳播、數位創作等學系，體驗生活感居民對話與集章探索。">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏝️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./js/vendor/three.module.js",
+      "three/addons/": "./js/vendor/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- 3D WebGL 渲染畫布容器 -->
+  <div id="canvas-container" role="region" aria-label="3D 島嶼互動場景"></div>
+
+  <!-- 電影史詩開場覆蓋層 -->
+  <div id="cinema-overlay" aria-hidden="false">
+    <div class="cinema-title-wrap">
+      <div class="mascot-badge" style="width: 56px; height: 56px; font-size: 32px; margin: 0 auto 12px; background: rgba(255,255,255,0.9);">🐦</div>
+      <h1 class="cinema-main-title">慈大人社未來島</h1>
+      <p class="cinema-sub-title">探索人文、傳播與社會科學的升學方向</p>
+    </div>
+    <button id="skip-cinema-btn" class="cinema-skip-btn" type="button" aria-label="跳過開場運鏡">
+      ⏩ 進入群島 (點擊或按 Esc 跳過)
+    </button>
+  </div>
+
+  <!-- 頂部功能列 -->
+  <header class="top-header" role="banner">
+    <div class="brand-wrapper" id="brand-badge" role="button" tabindex="0" title="點擊查看導覽小禾">
+      <div class="mascot-badge" aria-hidden="true">🐦</div>
+      <div>
+        <h2 class="site-title">慈大人社未來島</h2>
+        <span class="site-tagline">慈大人文迎新展覽線上體驗</span>
+      </div>
+    </div>
+
+    <div class="header-tools" role="toolbar" aria-label="導覽工具列">
+      <button class="tool-chip" id="btn-open-search" type="button" aria-label="搜尋學系與攤位">
+        <span>🔍</span> 搜尋
+      </button>
+      <button class="tool-chip" id="btn-open-list" type="button" aria-label="打開地點清單">
+        <span>📋</span> 地點
+      </button>
+      <button class="tool-chip" id="btn-open-stamps" type="button" aria-label="查看集章冊與活動時程">
+        <span>🏷️</span> 集章 <b id="stamp-count-badge" style="color:var(--accent);">(0/10)</b>
+      </button>
+      <button class="tool-chip" id="btn-open-backpack" type="button" aria-label="查看冒險背包">
+        <span>🎒</span> 背包 <b id="shell-count-badge" style="color:var(--accent);">(3🐚)</b>
+      </button>
+      <button class="tool-chip" id="btn-open-share" type="button" aria-label="分享與存檔">
+        <span>📤</span> 分享
+      </button>
+    </div>
+  </header>
+
+  <!-- 底部核心控制欄（底色主題與日夜燈光切換） -->
+  <nav class="control-dock" role="navigation" aria-label="場景與主題控制">
+    <!-- 主題底色切換 -->
+    <div class="control-group" id="theme-buttons-group" role="radiogroup" aria-label="介面底色主題">
+      <button class="dock-btn" data-theme-val="auto" id="theme-btn-auto" type="button" title="跟隨日出日落自動切換底色">
+        <span>🌅</span> 自動
+      </button>
+      <button class="dock-btn active" data-theme-val="forest" id="theme-btn-forest" type="button" title="森林底色（綠白）">
+        <span class="dock-color-swatch" style="background: #eef3e6;"></span> 森林
+      </button>
+      <button class="dock-btn" data-theme-val="tundra" id="theme-btn-tundra" type="button" title="苔原底色（灰綠）">
+        <span class="dock-color-swatch" style="background: #dfe8d3;"></span> 苔原
+      </button>
+      <button class="dock-btn" data-theme-val="deepforest" id="theme-btn-deepforest" type="button" title="深林底色（夜幕墨綠）">
+        <span class="dock-color-swatch" style="background: #1b2a20;"></span> 深林
+      </button>
+    </div>
+
+    <div class="dock-divider" aria-hidden="true"></div>
+
+    <!-- 晝夜時段切換 -->
+    <div class="control-group" id="time-buttons-group" role="radiogroup" aria-label="場景光線時段">
+      <button class="dock-btn active" data-time-val="day" id="time-btn-day" type="button" title="白天陽光">
+        <span>☀️</span> 白天
+      </button>
+      <button class="dock-btn" data-time-val="dusk" id="time-btn-dusk" type="button" title="黃昏暖霞">
+        <span>🌇</span> 黃昏
+      </button>
+      <button class="dock-btn" data-time-val="night" id="time-btn-night" type="button" title="星空夜幕與暖燈">
+        <span>🌙</span> 夜晚
+      </button>
+      <button class="dock-btn" data-time-val="flow" id="time-btn-flow" type="button" title="時間自動流動循環">
+        <span>⏱️</span> 流動
+      </button>
+      <button class="dock-btn" data-time-val="realtime" id="time-btn-realtime" type="button" title="與電腦真實時鐘同步">
+        <span>🕒</span> 同步
+      </button>
+    </div>
+
+    <div class="dock-divider" aria-hidden="true"></div>
+
+    <!-- 即時時鐘與天色標籤 -->
+    <div id="live-clock-badge" style="font-size:0.78rem; font-weight:700; color:var(--ink); padding:0 6px; white-space:nowrap;">
+      ☀️ 白天 10:30
+    </div>
+  </nav>
+
+  <!-- 左下角操作快捷按鈕 -->
+  <aside class="action-cluster-left">
+    <button class="round-btn" id="btn-reset-view" type="button" title="回到群島全景" aria-label="回到群島全景">
+      🌐
+    </button>
+    <button class="round-btn" id="btn-replay-cinema" type="button" title="重播電影史詩開場" aria-label="重播開場動畫">
+      🎬
+    </button>
+  </aside>
+
+  <!-- 右下角操作快捷按鈕 -->
+  <aside class="action-cluster-right">
+    <button class="round-btn" id="btn-toggle-motion" type="button" title="動態開關／減少動態" aria-label="動態切換">
+      🍃
+    </button>
+    <button class="round-btn" id="btn-toggle-quality" type="button" title="畫質切換（高／低畫質）" aria-label="切換畫質">
+      ⚡
+    </button>
+    <button class="round-btn" id="btn-open-accessible" type="button" title="純文字閱讀模式（無障礙）" aria-label="開啟純文字無障礙模式">
+      ♿
+    </button>
+  </aside>
+
+  <!-- 3D 浮動標籤容器（由 JS 動態計算位置） -->
+  <div id="markers-container" aria-hidden="true"></div>
+
+  <!-- NPC 與動物對話泡泡容器 -->
+  <div id="speech-bubble-container" aria-live="polite"></div>
+
+  <!-- 側邊／底部島嶼詳情抽屜面板 -->
+  <section id="island-panel" class="side-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title-text" aria-hidden="true">
+    <div class="panel-header">
+      <div class="panel-title-group">
+        <span class="panel-badge" id="panel-group-badge">大學部與碩士班</span>
+        <h3 class="panel-title" id="panel-title-text">社工助人島</h3>
+      </div>
+      <button class="panel-close-btn" id="panel-close-btn" type="button" aria-label="關閉內容面板 (Esc)">✕</button>
+    </div>
+
+    <div class="panel-body">
+      <!-- 一句話介紹 -->
+      <div class="panel-card" style="border-left: 4px solid var(--primary);">
+        <p id="panel-intro-text" style="font-size: 1.05rem; font-weight: 700; color: var(--ink);">從服務現場認識專業助人的力量</p>
+      </div>
+
+      <!-- 重要提醒公告（如停招或師培非獨立學系） -->
+      <div id="panel-notice-box" class="panel-notice-card" style="display: none;"></div>
+
+      <!-- 核心學習重點 -->
+      <div class="panel-card">
+        <h4 class="panel-section-title"><span>🎯</span> 核心學習重點</h4>
+        <ul id="panel-points-list" style="padding-left: 20px; font-size: 0.9rem; color: var(--ink-secondary); line-height: 1.7;"></ul>
+      </div>
+
+      <!-- 展出作品／攤位特展（標註示意） -->
+      <div class="panel-card">
+        <h4 class="panel-section-title"><span id="panel-extra-label">🎪 展出作品／攤位</span></h4>
+        <div id="panel-exhibits-list"></div>
+      </div>
+
+      <!-- 攤位特色活動 -->
+      <div class="panel-card" style="background: var(--surface-alt);">
+        <h4 class="panel-section-title"><span>✨</span> 攤位現場體驗（示意）</h4>
+        <p id="panel-activity-text" style="font-size: 0.88rem; color: var(--ink); line-height: 1.5;"></p>
+      </div>
+
+      <!-- 島上居民聯絡人 -->
+      <div class="panel-card">
+        <h4 class="panel-section-title"><span>👥</span> 島上學長姊與夥伴</h4>
+        <div id="panel-residents-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+    </div>
+
+    <div class="panel-footer">
+      <a id="panel-official-link" class="btn-primary" href="#" target="_blank" rel="noopener noreferrer">
+        <span>🌐</span> 前往系所官方網站 ↗
+      </a>
+    </div>
+  </section>
+
+  <!-- 模態彈窗 1：地點清單（全島一覽） -->
+  <div class="modal-backdrop" id="modal-list" role="dialog" aria-modal="true" aria-labelledby="modal-list-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-list-title"><span>📋</span> 群島地點清單</h3>
+        <button class="panel-close-btn modal-close" type="button" aria-label="關閉清單">✕</button>
+      </div>
+      <div class="modal-body" id="modal-list-content"></div>
+    </div>
+  </div>
+
+  <!-- 模態彈窗 2：搜尋島嶼與內容 -->
+  <div class="modal-backdrop" id="modal-search" role="dialog" aria-modal="true" aria-labelledby="modal-search-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-search-title"><span>🔍</span> 搜尋群島與攤位內容</h3>
+        <button class="panel-close-btn modal-close" type="button" aria-label="關閉搜尋">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-input-box">
+          <span>🔍</span>
+          <input type="text" id="search-query-input" placeholder="輸入關鍵字（例如：心理、科技、碩士、實習、XR...）" aria-label="搜尋關鍵字">
+          <button id="search-clear-btn" type="button" style="background:none; border:none; color:var(--muted); cursor:pointer;">✕</button>
+        </div>
+        <div id="search-results-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模態彈窗 3：集章冊與活動時程 -->
+  <div class="modal-backdrop" id="modal-stamps" role="dialog" aria-modal="true" aria-labelledby="modal-stamps-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-stamps-title"><span>🏷️</span> 迎新大集章與活動時程</h3>
+        <button class="panel-close-btn modal-close" type="button" aria-label="關閉集章冊">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="panel-card" style="margin-bottom: 16px; text-align: center;">
+          <h4 style="font-size: 1.1rem; color: var(--primary);">探索進度：<span id="stamp-progress-text">0 / 10 島</span></h4>
+          <p style="font-size: 0.85rem; color: var(--muted); margin-top: 4px;">點擊並參訪群島中的各系所展區，即可蒐集該島專屬徽章！</p>
+          <div class="stamps-grid" id="stamps-grid-container"></div>
+          <div id="stamp-complete-celebration" style="display: none; padding: 12px; background: var(--badge-bg); border-radius: var(--radius-md); margin-top: 10px;">
+            <p style="font-weight: 800; color: var(--accent); font-size: 1rem;">🎉 恭喜達成群島全域探索！</p>
+            <p style="font-size: 0.82rem; color: var(--ink);">你已經看過人社院全部 10 座展區島嶼，歡迎打開分享卡片留下紀念！</p>
+          </div>
+          <button id="reset-stamps-btn" type="button" style="margin-top: 10px; font-size: 0.75rem; color: var(--muted); background: none; border: underline; cursor: pointer;">重置集章進度</button>
+        </div>
+
+        <div class="panel-card">
+          <h4 class="panel-section-title"><span>⏱️</span> 迎新港一日活動時程（示意）</h4>
+          <div id="schedule-timeline-container" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模態彈窗 4：冒險背包與交易記錄 -->
+  <div class="modal-backdrop" id="modal-backpack" role="dialog" aria-modal="true" aria-labelledby="modal-backpack-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-backpack-title"><span>🎒</span> 探險者隨身背包</h3>
+        <button class="panel-close-btn modal-close" type="button" aria-label="關閉背包">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="panel-card" style="margin-bottom: 16px;">
+          <h4 class="panel-section-title"><span>📦</span> 擁有物品清單</h4>
+          <div class="backpack-grid" id="backpack-items-grid"></div>
+          <p style="font-size: 0.78rem; color: var(--muted); line-height: 1.5;">
+            💡 提示：在各島嶼邊緣的沙灘可以撿到 🐚 海灘貝殼（點擊貝殼可拾取，每隔 20 秒會再次在海灘刷新）。拿到貝殼後，可以找島上的學長姊居民以物易物，最終能換得傳說中的「🌟 慈大人文未來領航勳章」！
+          </p>
+          <button id="reset-backpack-btn" type="button" style="margin-top: 12px; font-size: 0.75rem; color: var(--muted); background: none; border: underline; cursor: pointer;">清空背包重置物品</button>
+        </div>
+
+        <div class="panel-card">
+          <h4 class="panel-section-title"><span>🔁</span> 10 島交換進度指引</h4>
+          <div id="trade-chain-flow" style="font-size: 0.82rem; color: var(--ink-secondary); line-height: 1.8;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模態彈窗 5：分享卡片 -->
+  <div class="modal-backdrop" id="modal-share" role="dialog" aria-modal="true" aria-labelledby="modal-share-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-share-title"><span>📤</span> 分享群島探索成果</h3>
+        <button class="panel-close-btn modal-close" type="button" aria-label="關閉分享">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="panel-card" id="share-card-preview" style="text-align: center; padding: 24px; border: 2px solid var(--line-strong); background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);">
+          <div style="font-size: 40px; margin-bottom: 6px;">🏝️✨</div>
+          <h4 style="font-size: 1.3rem; font-weight: 900; color: var(--ink);">我正在探索【慈大人社未來島】</h4>
+          <p style="font-size: 0.88rem; color: var(--muted); margin: 6px 0 16px;">探索慈大人文、傳播與社會科學的升學方向</p>
+          <div style="display: flex; justify-content: space-around; background: var(--surface); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--line); margin-bottom: 16px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--muted);">集章完成度</div>
+              <div id="share-stamp-count" style="font-size: 1.2rem; font-weight: 800; color: var(--primary);">0 / 10</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--muted);">擁有物資</div>
+              <div id="share-item-count" style="font-size: 1.2rem; font-weight: 800; color: var(--accent);">3 件</div>
+            </div>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--ink-secondary);">快來跟我一起漫步層疊台地、和島民學長姊聊天交易吧！</p>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+          <button class="btn-primary" id="btn-copy-link" type="button"><span>🔗</span> 複製網站網址</button>
+        </div>
+        <p id="copy-toast" style="font-size: 0.8rem; color: var(--primary); text-align: center; margin-top: 8px; display: none;">✅ 網址已成功複製到剪貼簿！</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 純文字無障礙Fallback視圖（WebGL 失敗或手動切換） -->
+  <main id="accessible-fallback" role="main" aria-label="慈大人社未來島純文字導覽">
+    <div style="max-width: 800px; margin: 0 auto; background: var(--surface); padding: 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="font-size: 1.8rem; color: var(--primary);">慈大人社未來島（純文字無障礙版）</h1>
+        <button id="btn-close-accessible" class="tool-chip" type="button">返回 3D 體驗</button>
+      </div>
+      <p style="margin-bottom: 20px; color: var(--muted);">歡迎光臨慈濟大學人文傳播暨社會科學院。本頁面提供無 WebGL 環境下完整的展區、作品介紹、攤位活動與學長姊導覽內容。</p>
+      <div id="accessible-islands-container"></div>
+      <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--muted);">
+        <p>本站為非官方線上導覽專題，內容與教材整理僅供升學探索與活動體驗示意，正式招生資訊與章程請以各系所官方網站為準。</p>
+      </footer>
+    </div>
+  </main>
+
+  <!-- 應用程式主邏輯模組 -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
